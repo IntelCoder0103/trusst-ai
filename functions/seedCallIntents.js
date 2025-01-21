@@ -12,6 +12,12 @@ const { ScanCommand } = require("@aws-sdk/client-dynamodb");
 
 const CALL_INTENTS_TABLE = process.env.CALL_INTENTS_TABLE;
 
+/**
+ * Controller for seeding call intents
+ * @param {*} req Request
+ * @param {*} res Response
+ * @returns 
+ */
 module.exports = async function seedCallIntents(req, res) {
   // Read text file from data/call-intents.txt
   const dataPath = path.join(__dirname, "call_intents.txt");

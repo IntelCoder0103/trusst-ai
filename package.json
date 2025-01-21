@@ -5,11 +5,11 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.585.0",
     "@aws-sdk/client-opensearch": "^3.731.1",
+    "@aws-sdk/credential-provider-node": "^3.731.1",
     "@aws-sdk/lib-dynamodb": "^3.585.0",
     "@opensearch-project/opensearch": "^3.1.0",
-    "@pinecone-database/pinecone": "^4.1.0",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "llamaindex": "^0.8.31",
     "openai": "^4.79.1",
     "serverless-finch": "^4.0.4",
     "serverless-http": "^3.2.0",

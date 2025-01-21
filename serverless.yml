@@ -8,7 +8,7 @@ service: trusst-ai-challenge
 stages:
   default:
     params:
-      tableName: "call-intents-${sls:stage}"
+      tableName: "call-intents-2-${sls:stage}"
 
 provider:
   name: aws
@@ -27,9 +27,16 @@ provider:
             - dynamodb:BatchWriteItem
           Resource:
             - Fn::GetAtt: [CallIntentsTable, Arn]
-  timeout: 30
+        - Effect: Allow
+          Action:
+            - es:ESHttpGet
+            - es:ESHttpPost
+            - es:ESHttpPut
+          Resource: arn:aws:es:us-east-1:509399592131:domain/trusstai/*
   environment:
     CALL_INTENTS_TABLE: ${param:tableName}
+    OPEN_SEARCH_ENDPOINT: "https://search-trusstai-3d2u3v6ktzotnzhmaj3bycumte.us-east-1.es.amazonaws.com"
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
 
 functions:
   clusterCallIntentsScheduled:
@@ -40,6 +47,7 @@ functions:
     handler: handler.handler
     events:
       - httpApi: "*"
+        cors: true
 
 plugins:
   - serverless-offline

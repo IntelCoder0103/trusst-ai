@@ -16,19 +16,23 @@ module.exports = async function clusterCallIntents() {
     const command = new ScanCommand({
       TableName: CALL_INTENTS_TABLE,
       FilterExpression: "attribute_not_exists(cluster_id)",
-      // Limit: 5,
     });
+
+    // If all items are clustered, return
     const { Items } = await docClient.send(command);
     if (Items && Items.length <= 0) {
-      return res.json({ message: "All call intents are already clustered" });
+      return;
     }
 
     console.log(Items.length);
 
+    const openai = new OpenAI(process.env.OPENAI_API_KEY);
+
+    // Process 20 items at a time due to Lambda Timeout
     for (const item of Items.slice(0, 20)) {
-      const openai = new OpenAI(process.env.OPENAI_API_KEY);
       const intent = item['intent']['S'];
       const call_id = item['call_id']['S'];
+
       const embeddingRes = await openai.embeddings.create({
         model: 'text-embedding-3-small',
         input: intent,
@@ -53,11 +57,15 @@ module.exports = async function clusterCallIntents() {
 
       const { hits } = searchRes.body.hits;
 
-      // Update the cluster_id for the item
-      const nearestHits = hits.filter(hit => hit._score >= 0.75);
+      // Find the cluster of the nearest Hit and Update the cluster_id for the item
+      const nearestHits = hits.filter(hit => hit._score >= 0.6 && hit._source?.call_id !== call_id);
       console.log({ nearestHits });
+      if (nearestHits.length <= 0) {
+        console.log({ hits });
+      }
+
       const cluster_id = nearestHits?.[0]?._source?.cluster_id || uuid();
-      console.log({ cluster_id });
+
       const putCommand = new PutCommand({
         TableName: CALL_INTENTS_TABLE,
         Item: {
@@ -79,16 +87,6 @@ module.exports = async function clusterCallIntents() {
       });
     }
 
-    // await openSearchClient.index({
-    //   index: INDEX_NAME,
-    //   body: {
-    //     vector_embeddings: embedding,
-    //     call_id: item['call_id']['S'],
-    //   }
-    // });
-    // Cluster the call intents
-
-    // res.json({ message: "Call intents seeded successfully" });
   } catch (error) {
     console.error(error);
     throw new Error("Could not cluster call intents");
