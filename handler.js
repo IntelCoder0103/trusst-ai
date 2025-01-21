@@ -8,14 +8,27 @@ const {
 
 const express = require("express");
 const serverless = require("serverless-http");
+const seedCallIntents = require("./functions/seedCallIntents");
+const clusterCallIntents = require("./functions/clusterCallIntents");
 
 const app = express();
 
-const USERS_TABLE = process.env.USERS_TABLE;
-const client = new DynamoDBClient();
-const docClient = DynamoDBDocumentClient.from(client);
-
 app.use(express.json());
+
+app.get("/", async (req, res) => {
+  res.json({ message: "Hello World" });
+});
+
+app.post("/seed", seedCallIntents);
+app.post("/cluster", async (req, res) => {
+  try {
+    await clusterCallIntents();
+    res.json({ message: "Call intents clustered successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Could not cluster call intents" });
+  }
+});
+
 
 app.get("/users/:userId", async (req, res) => {
   const params = {
@@ -71,4 +84,13 @@ app.use((req, res, next) => {
   });
 });
 
+exports.clusterCallIntentsScheduled = async (event) => {
+  try {
+    await clusterCallIntents();
+    return { statusCode: 200, body: JSON.stringify({ message: "Call intents clustered successfully" }) };
+  } catch (error) {
+    console.error(error);
+    return { statusCode: 500, body: JSON.stringify({ error: "Could not cluster call intents" }) };
+  }
+}
 exports.handler = serverless(app);

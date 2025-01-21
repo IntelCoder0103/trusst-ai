@@ -8,7 +8,7 @@ service: trusst-ai-challenge
 stages:
   default:
     params:
-      tableName: "users-table-${sls:stage}"
+      tableName: "call-intents-${sls:stage}"
 
 provider:
   name: aws
@@ -24,27 +24,41 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
           Resource:
-            - Fn::GetAtt: [UsersTable, Arn]
+            - Fn::GetAtt: [CallIntentsTable, Arn]
+  timeout: 30
   environment:
-    USERS_TABLE: ${param:tableName}
+    CALL_INTENTS_TABLE: ${param:tableName}
 
 functions:
+  clusterCallIntentsScheduled:
+    handler: handler.clusterCallIntentsScheduled
+    events:
+      - schedule: rate(1 minute)  # The Lambda will run once a minute
   api:
     handler: handler.handler
     events:
       - httpApi: "*"
 
+plugins:
+  - serverless-offline
+  - serverless-finch
+
 resources:
   Resources:
-    UsersTable:
+    CallIntentsTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: userId
+          - AttributeName: call_id
             AttributeType: S
         KeySchema:
-          - AttributeName: userId
+          - AttributeName: call_id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${param:tableName}
+
+custom:
+  client:
+    bucketName: trusst-ai-client
